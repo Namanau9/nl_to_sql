@@ -161,8 +161,8 @@ def validate_sql(
     )
     if unauthorized:
         error = (
-            f"Query references unauthorized table(s): {', '.join(sorted(unauthorized))}. "
-            f"Only tables in the approved schema may be used."
+            "Query references one or more unauthorized table(s). "
+            "Only tables in the approved schema may be used."
         )
         log.warning("SQL validation failed: unauthorized tables", extra={"extra_data": {"error": error}})
         raise SQLValidationError(error)
