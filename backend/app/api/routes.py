@@ -121,7 +121,7 @@ def query(
             error=result.error,
         )
 
-        # 6. Explanation
+        # 6. Explanation (use whatever rows we got, even if execution had an error)
         explanation = llm.generate_explanation(
             request.question, sql, result.columns, result.rows
         )
@@ -130,12 +130,13 @@ def query(
         total_ms = _now_ms() - start_ms
         logger.log(entry)
 
+        response_status = "success" if result.status == "success" else "error"
         return QueryResponseSchema(
             question=request.question,
             sql=sql,
             explanation=explanation,
             results=result.to_dict() if result else None,
-            status="success",
+            status=response_status,
             error=result.error if result.status == "error" else None,
             execution_ms=total_ms,
         )
