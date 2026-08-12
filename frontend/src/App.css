@@ -1,0 +1,86 @@
+html, body {
+  background-color: #111420;
+  color: #e2e8f0;
+  font-family: "Source Serif Pro", Georgia, serif;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+:root {
+  --color-bg: 17 20 32;
+  --color-bg-alt: 24 28 45;
+  --color-accent: 217 179 5;
+  --color-accent-dim: 174 143 4;
+  --color-text: 226 232 255;
+  --color-text-muted: 156 162 192;
+  --color-success: 74 222 122;
+  --color-error: 248 113 113;
+}
+
+::selection {
+  background-color: rgba(217, 179, 5, 0.3);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(58, 65, 85, 0.5);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(217, 179, 5, 0.4);
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.btn-primary {
+  background-color: rgb(217 179 5);
+  color: #111827;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: rgb(174 143 4);
+  transform: translateY(-1px);
+}
+
+.btn-primary:disabled {
+  background-color: rgba(217, 179, 5, 0.4);
+  cursor: not-allowed;
+}
+
+.font-display {
+  font-family: "Playfair Display", Georgia, serif;
+}
+
+.stage-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  transition: all 0.3s ease;
+}
+
+.stage-dot.active {
+  background-color: rgb(217 179 5);
+  width: 10px;
+  height: 10px;
+  box-shadow: 0 0 10px rgba(217, 179, 5, 0.7);
+}
+
+.stage-dot.complete {
+  background-color: rgb(74 222 122);
+  width: 8px;
+  height: 8px;
+}
