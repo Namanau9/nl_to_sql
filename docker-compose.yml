@@ -10,7 +10,6 @@ services:
       - "5432:5432"
     volumes:
       - ./database/init:/docker-entrypoint-initdb.d:ro
-      - ./database/seed/02_seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
       - nlsql_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U nlsql_app -d nlsql"]
