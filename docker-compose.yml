@@ -1,0 +1,49 @@
+﻿services:
+  db:
+    image: postgres:16-alpine
+    container_name: nlsql_db
+    environment:
+      POSTGRES_DB: nlsql
+      POSTGRES_USER: nlsql_app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-NLSQL_APP_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+      - nlsql_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nlsql_app -d nlsql"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nlsql_backend
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://nlsql_app:${POSTGRES_PASSWORD:-NLSQL_APP_PASSWORD}@db:5432/nlsql
+      READONLY_DATABASE_URL: postgresql+psycopg://nlsql_readonly:${READONLY_PASSWORD:-NLSQL_READONLY_PASSWORD}@db:5432/nlsql
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nlsql_frontend
+    environment:
+      VITE_API_URL: http://localhost:8000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  nlsql_data:

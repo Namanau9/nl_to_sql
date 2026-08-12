@@ -1,0 +1,593 @@
+# Feature Requirements
+
+## 1. Feature Overview
+
+The Natural Language → SQL Analytics Assistant provides a conversational interface for querying structured business data without requiring users to know SQL.
+
+Features are divided into:
+
+* Core MVP Features
+* Reliability & Security Features
+* Optional Stretch Features
+* Future Features
+
+---
+
+# 2. Core MVP Features
+
+## F-001 — Natural Language Question Input
+
+**Priority:** Critical
+
+Users shall be able to enter business questions using natural language.
+
+### Example
+
+```text
+What were our top 5 products by revenue last month?
+```
+
+### Requirements
+
+* Text input.
+* Submit action.
+* Loading state.
+* Input validation.
+* Clear error messages.
+
+---
+
+## F-002 — Database Schema Discovery
+
+**Priority:** Critical
+
+The system shall dynamically discover the available database schema.
+
+### The system should identify:
+
+* Tables
+* Columns
+* Data types
+* Primary keys
+* Foreign keys
+* Relationships
+
+Schema information must be retrieved from the database rather than manually hard-coded into individual queries.
+
+---
+
+## F-003 — Relevant Schema Retrieval
+
+**Priority:** Critical
+
+The system shall determine which tables and columns are relevant to a user's question.
+
+### Example
+
+Question:
+
+```text
+Which product generated the highest revenue?
+```
+
+Potential relevant schema:
+
+```text
+products
+order_items
+orders
+```
+
+Irrelevant tables should be excluded where practical.
+
+---
+
+## F-004 — Natural Language to SQL
+
+**Priority:** Critical
+
+The system shall use an LLM to generate SQL from:
+
+```text
+User Question
++
+Relevant Schema
++
+SQL Generation Rules
+```
+
+The generated query must conform to the configured database dialect.
+
+---
+
+## F-005 — SQL Validation
+
+**Priority:** Critical
+
+Every generated SQL query must be validated before execution.
+
+### Validation must check:
+
+* SQL syntax
+* Statement type
+* Allowed operations
+* Table references
+* Query structure
+* Multiple statements
+* Destructive operations
+
+Only approved queries may proceed.
+
+---
+
+## F-006 — Read-Only Query Execution
+
+**Priority:** Critical
+
+Approved queries shall execute using a read-only database connection.
+
+The feature must prevent modifications to the database.
+
+---
+
+## F-007 — Query Result Display
+
+**Priority:** Critical
+
+The application shall display query results in a readable tabular format.
+
+The interface should support:
+
+* Column headers
+* Rows
+* Empty-result state
+* Result count
+* Execution status
+
+---
+
+## F-008 — Natural Language Result Explanation
+
+**Priority:** Critical
+
+The system shall explain query results in natural language.
+
+### Example
+
+```text
+The South region generated the highest revenue at
+₹12.45 million, followed by the North region at
+₹10.21 million.
+```
+
+The explanation must be grounded in the actual query result.
+
+---
+
+## F-009 — Error Handling
+
+**Priority:** Critical
+
+The system shall handle:
+
+* Invalid SQL
+* Invalid questions
+* Database errors
+* LLM errors
+* Empty results
+* Query timeouts
+
+Errors must be presented clearly to the user.
+
+---
+
+## F-010 — Query Logging
+
+**Priority:** High
+
+The system shall maintain query execution logs.
+
+Logs may include:
+
+```text
+Timestamp
+User question
+Generated SQL
+Validation status
+Execution status
+Execution duration
+Error status
+```
+
+Sensitive information must not be unnecessarily logged.
+
+---
+
+# 3. Reliability Features
+
+## F-011 — Query Repair
+
+**Priority:** Medium / Stretch
+
+When valid user intent produces invalid SQL, the system may attempt to repair the query.
+
+### Workflow
+
+```text
+SQL Generation
+      ↓
+Execution
+      ↓
+Error
+      ↓
+Repair Prompt
+      ↓
+New SQL
+      ↓
+Validation
+      ↓
+Execution
+```
+
+The repair loop must have a strict retry limit.
+
+Recommended:
+
+```text
+Maximum attempts: 2
+```
+
+---
+
+## F-012 — Query Explanation Mode
+
+**Priority:** Medium / Stretch
+
+The system may explain:
+
+* What the generated SQL does.
+* Which tables were used.
+* Which filters were applied.
+* Which aggregations were performed.
+
+---
+
+## F-013 — Chart Generation
+
+**Priority:** Medium / Stretch
+
+The system may automatically generate visualizations when the result is suitable.
+
+Possible chart types:
+
+* Bar chart
+* Line chart
+* Pie chart
+* Area chart
+
+Charts should only be generated when the result structure supports meaningful visualization.
+
+---
+
+## F-014 — Query History
+
+**Priority:** Medium / Stretch
+
+The application may maintain a history of previously executed questions.
+
+Each history item may contain:
+
+```text
+Question
+SQL
+Timestamp
+Execution status
+```
+
+---
+
+# 4. User Experience Features
+
+## F-015 — Conversational Interface
+
+**Priority:** High
+
+The application should provide a simple chat-like analytics interface.
+
+Example:
+
+```text
+User:
+Show monthly revenue for 2026.
+
+Assistant:
+Here are the monthly revenue results...
+
+[Table]
+
+Revenue increased by...
+```
+
+---
+
+## F-016 — SQL Visibility
+
+**Priority:** High
+
+The application should optionally allow users to inspect the SQL generated by the system.
+
+This improves:
+
+* Transparency
+* Debugging
+* Trust
+* Demonstration value
+
+---
+
+## F-017 — Processing State
+
+**Priority:** Medium
+
+The UI should communicate stages such as:
+
+```text
+Analyzing question...
+Finding relevant schema...
+Generating SQL...
+Validating query...
+Executing query...
+Analyzing results...
+```
+
+---
+
+# 5. Security Features
+
+## F-018 — Destructive Query Rejection
+
+**Priority:** Critical
+
+The application shall reject:
+
+```text
+INSERT
+UPDATE
+DELETE
+DROP
+ALTER
+TRUNCATE
+CREATE
+GRANT
+REVOKE
+```
+
+where they are outside the explicitly permitted read-only operation set.
+
+---
+
+## F-019 — Read-Only Database Role
+
+**Priority:** Critical
+
+Database execution must use a restricted read-only account.
+
+---
+
+## F-020 — Query Limits
+
+**Priority:** High
+
+The application should support configurable:
+
+* Query timeout
+* Maximum result rows
+* Maximum response size
+* Maximum repair attempts
+
+---
+
+# 6. Developer Features
+
+## F-021 — Docker Support
+
+**Priority:** High
+
+The application should be runnable using Docker.
+
+The development environment should provide reproducible setup for:
+
+```text
+Frontend
+Backend
+Database
+```
+
+---
+
+## F-022 — Configuration Management
+
+**Priority:** High
+
+Environment-specific configuration should be managed through environment variables.
+
+Example:
+
+```text
+DATABASE_URL
+LLM_API_KEY
+LLM_MODEL
+QUERY_TIMEOUT
+MAX_RESULT_ROWS
+```
+
+---
+
+## F-023 — Test Suite
+
+**Priority:** Critical
+
+The project shall provide a reproducible test set covering:
+
+### Successful queries
+
+```text
+Customer count
+Revenue by month
+Top products
+Revenue by region
+Customer ranking
+Category performance
+```
+
+### Failure cases
+
+```text
+Invalid SQL
+Unknown table
+Unknown column
+Empty result
+Database failure
+LLM failure
+```
+
+### Security cases
+
+```text
+DELETE
+UPDATE
+DROP
+INSERT
+ALTER
+TRUNCATE
+Multiple statements
+```
+
+---
+
+# 7. Documentation Features
+
+## F-024 — README
+
+**Priority:** Critical
+
+The repository shall document:
+
+* Project overview
+* Problem statement
+* Architecture
+* Technology stack
+* Setup
+* Environment configuration
+* Usage
+* Example questions
+* Testing
+* Security
+* Limitations
+* Future improvements
+
+---
+
+## F-025 — Architecture Diagram
+
+**Priority:** Critical
+
+The project shall include an architecture diagram showing:
+
+```text
+Frontend
+   ↓
+Backend
+   ↓
+Schema Discovery
+   ↓
+LLM
+   ↓
+SQL Validator
+   ↓
+Read-Only Database
+   ↓
+Result Processor
+   ↓
+Frontend
+```
+
+---
+
+## F-026 — Technical Report
+
+**Priority:** High
+
+The technical report should document:
+
+* Problem
+* Architecture
+* Design decisions
+* LLM approach
+* SQL validation
+* Security model
+* Testing
+* Results
+* Limitations
+* Future improvements
+
+---
+
+# 8. Future Features
+
+These features are outside the initial MVP and should not delay delivery:
+
+* Role-based access control
+* Multiple database connections
+* Multi-tenant architecture
+* Advanced analytics
+* Semantic business metrics
+* Scheduled reports
+* Saved dashboards
+* Advanced visualization
+* Authentication and SSO
+* Audit dashboards
+* Fine-grained column-level permissions
+
+---
+
+# 9. MVP Feature Priority
+
+| Feature                   | Priority |
+| ------------------------- | -------- |
+| Natural language input    | Critical |
+| Schema discovery          | Critical |
+| Relevant schema retrieval | Critical |
+| NL → SQL                  | Critical |
+| SQL validation            | Critical |
+| Read-only execution       | Critical |
+| Result display            | Critical |
+| Result explanation        | Critical |
+| Error handling            | Critical |
+| Query logging             | High     |
+| Docker support            | High     |
+| Test suite                | Critical |
+| Documentation             | Critical |
+| Query repair              | Stretch  |
+| Charts                    | Stretch  |
+| Query history             | Stretch  |
+| RBAC                      | Future   |
+
+---
+
+# 10. Definition of Done
+
+The MVP is complete when a user can:
+
+1. Enter a natural-language business question.
+2. Have the system identify relevant database schema.
+3. Receive a generated SQL query.
+4. Have the query validated.
+5. Execute the query against a read-only database.
+6. View the results.
+7. Receive a natural-language explanation.
+8. See a useful error when the workflow fails.
+9. Demonstrate that destructive queries are rejected.
+10. Reproduce the project using the documented setup.
+
+The system should prioritize a stable and demonstrable core workflow over additional features.
