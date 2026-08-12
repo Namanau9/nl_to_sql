@@ -49,8 +49,19 @@ def test_extract_sql_handles_raw_response():
 
 
 def test_extract_sql_empty_raises():
-    with pytest.raises(LLMError, match="did not contain SQL"):
-        _extract_sql("No SQL here")
+    with pytest.raises(LLMError, match="no SQL"):
+        _extract_sql("")
+
+
+def test_extract_sql_none_raises():
+    with pytest.raises(LLMError, match="no SQL"):
+        _extract_sql(None)
+
+
+def test_extract_sql_non_sql_passes_through():
+    """Non-SQL text is returned as-is; the SQL validator will reject it later."""
+    raw = "I cannot help with that request."
+    assert _extract_sql(raw) == raw
 
 
 def test_extract_sql_strips_explain_prefix():
@@ -125,3 +136,14 @@ def test_openrouter_provider_headers_dont_leak_key():
     headers = provider._headers()
     assert "Bearer secret123" in headers["Authorization"]
     assert provider._api_key == "secret123"
+
+
+def test_llm_service_explanation_handles_none_content():
+    """If the LLM returns None content, generate_explanation raises LLMError."""
+    class NoneContentProvider(MockProvider):
+        def complete(self, *args, **kwargs):
+            return LLMResponse(content=None, model="mock")
+
+    service = LLMService(NoneContentProvider())
+    with pytest.raises(LLMError, match="empty or refused"):
+        service.generate_explanation("test", "SELECT 1", [], [])

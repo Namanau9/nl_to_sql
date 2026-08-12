@@ -40,7 +40,13 @@ def _extract_sql(raw: str) -> str:
     """Pull the first SQL statement out of an LLM response.
 
     Handles markdown code-fences, inline backticks, and raw SQL.
+    Does NOT validate the SQL — that is the job of the SQL validator.
+    Non-SQL responses (refusals, chit-chat) are returned as-is and will
+    be rejected by the validator with a ParseError.
     """
+    if raw is None:
+        raise LLMError(message="LLM response contained no SQL.")
+
     text = raw.strip()
 
     match = _SQL_FENCE_RE.search(text)
@@ -62,10 +68,6 @@ def _extract_sql(raw: str) -> str:
 
     if not text:
         raise LLMError(message="LLM response contained no SQL.")
-
-    upper = text.upper()
-    if not any(upper.startswith(kw) for kw in ("SELECT", "WITH", "VALUES")):
-        raise LLMError(message="LLM response did not contain SQL.")
 
     return text
 
@@ -163,6 +165,11 @@ class LLMService:
             raise LLMError(
                 message=f"Unexpected provider error: {type(exc).__name__}"
             ) from exc
+
+        if response.content is None:
+            raise LLMError(
+                message="LLM returned an empty or refused response."
+            )
 
         return response.content.strip()
 

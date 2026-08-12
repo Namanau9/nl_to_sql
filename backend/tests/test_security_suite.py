@@ -195,3 +195,23 @@ def test_error_messages_never_contain_table_values():
     except SQLValidationError as exc:
         msg = str(exc)
         assert "pg_shadow" not in msg
+
+
+def test_destructive_sql_reaches_validator():
+    """Destructive SQL must reach the SQL validator, not be pre-rejected by _extract_sql."""
+    from app.services.llm.service import _extract_sql
+
+    destructive = "DROP TABLE customers"
+    extracted = _extract_sql(destructive)
+    assert extracted == destructive
+    with pytest.raises(SQLValidationError, match="not permitted"):
+        _validator().validate(extracted)
+
+
+def test_non_sql_response_reaches_validator():
+    """Refusal text should reach the validator and be rejected as unparseable."""
+    from app.services.llm.service import _extract_sql
+
+    extracted = _extract_sql("I'm sorry, I can't help with that.")
+    with pytest.raises(SQLValidationError, match="could not be parsed"):
+        _validator().validate(extracted)
