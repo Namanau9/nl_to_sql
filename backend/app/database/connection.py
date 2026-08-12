@@ -9,10 +9,12 @@ Two engines are created:
 """
 from __future__ import annotations
 
+from typing import Any
+
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.pool import QueuePool
+from sqlalchemy.pool import QueuePool, StaticPool
 
 from app.core import get_logger
 
@@ -31,29 +33,42 @@ class Database:
         if not database_url:
             raise ValueError("database_url is required")
         self._statement_timeout_ms = statement_timeout_ms
-        self.discovery_engine: Engine = create_engine(
-            database_url,
-            poolclass=QueuePool,
-            pool_size=pool_size,
-            max_overflow=max_overflow,
-            pool_pre_ping=True,
-            future=True,
-        )
+        self._is_sqlite = database_url.lower().startswith("sqlite")
+
+        self.discovery_engine: Engine = self._create_engine(database_url)
         self.readonly_engine: Engine | None = None
         if readonly_database_url:
+            self.readonly_engine = self._create_engine(readonly_database_url, readonly=True)
+
+    def _create_engine(self, url: str, readonly: bool = False) -> Engine:
+        is_sqlite = url.lower().startswith("sqlite")
+        is_pg = "postgresql" in url.lower()
+
+        connect_args: dict[str, Any] = {}
+        pool_kwargs: dict[str, Any] = {}
+
+        if is_sqlite:
+            connect_args["check_same_thread"] = False
+            pool_kwargs["poolclass"] = StaticPool
+        else:
+            pool_kwargs["poolclass"] = QueuePool
+            pool_kwargs["pool_size"] = 5
+            pool_kwargs["max_overflow"] = 2
+
+        if is_pg and readonly:
             options = (
                 f"-c default_transaction_read_only=on "
-                f"-c statement_timeout={statement_timeout_ms}ms"
+                f"-c statement_timeout={self._statement_timeout_ms}ms"
             )
-            self.readonly_engine = create_engine(
-                readonly_database_url,
-                poolclass=QueuePool,
-                pool_size=pool_size,
-                max_overflow=max_overflow,
-                pool_pre_ping=True,
-                future=True,
-                connect_args={"options": options},
-            )
+            connect_args["options"] = options
+
+        return create_engine(
+            url,
+            pool_pre_ping=True,
+            future=True,
+            connect_args=connect_args,
+            **pool_kwargs,
+        )
 
     def close(self) -> None:
         self.discovery_engine.dispose()
@@ -91,3 +106,6 @@ class Database:
             return True
         except SQLAlchemyError:
             return False
+
+    def is_readonly_configured(self) -> bool:
+        return self.readonly_engine is not None

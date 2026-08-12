@@ -1,11 +1,14 @@
 """Mock LLM provider for tests and demos.
 
-Returns deterministic, hardcoded SQL for known question patterns.  When a
+Returns deterministic, canned responses for known question patterns.
+Handles both SQL generation and result explanation requests.  When a
 question does not match any known pattern the provider raises
 :class:`~app.core.errors.LLMError` so that callers can exercise their error
 path.
 """
 from __future__ import annotations
+
+import re
 
 from app.core.errors import LLMError
 from app.services.llm.base import BaseLLMProvider
@@ -60,14 +63,22 @@ _MOCK_RESPONSES: dict[str, str] = {
     ),
 }
 
-_DEFAULT_RESPOND = (
+_MOCK_EXPLANATIONS: dict[str, str] = {
+    "how many customers do we have": "The database contains 5 customers.",
+    "which product sold the most": "The top-selling product by revenue appears in the results table.",
+    "show revenue by region": "Revenue breakdown by region is shown in the results above.",
+}
+
+_DEFAULT_RESPONSE = (
     "I'm not configured to answer that question. "
     "Try asking about customers, revenue, products, or orders."
 )
 
+_EXPLANATION_MARKER = re.compile(r"^Question:\s*(.+?)\s*$", re.MULTILINE)
+
 
 class MockProvider(BaseLLMProvider):
-    """Deterministic provider that matches questions to canned SQL."""
+    """Deterministic provider that matches questions to canned SQL or explanations."""
 
     def complete(
         self,
@@ -81,9 +92,23 @@ class MockProvider(BaseLLMProvider):
             if msg.get("role") == "user":
                 question = msg.get("content", "")
                 break
+
+        is_explanation = question.strip().startswith("Question:")
+        if is_explanation:
+            match = _EXPLANATION_MARKER.search(question)
+            actual_q = match.group(1) if match else ""
+            key = actual_q.lower().strip().rstrip("?")
+            explanation = _MOCK_EXPLANATIONS.get(key)
+            if explanation:
+                return LLMResponse(content=explanation, model="mock")
+            return LLMResponse(
+                content="Based on the query results shown above, the answer is reflected in the returned data.",
+                model="mock",
+            )
+
         key = question.lower().strip().rstrip("?")
-        sql = _MOCK_RESPONSES.get(key, _DEFAULT_RESPOND)
-        if sql is _DEFAULT_RESPOND:
+        sql = _MOCK_RESPONSES.get(key)
+        if sql is None:
             raise LLMError(
                 message="No mock response for the given question.",
                 detail=f"question={question!r}",
