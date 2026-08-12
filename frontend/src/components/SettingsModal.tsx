@@ -18,7 +18,7 @@ export default function SettingsModal({open, onClose, settings, onChange}: Setti
           <h3 className="text-lg font-medium text-text-primary">Settings</h3>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+            className="p-1 hover:bg-bg rounded-lg transition-colors"
           >
             <X className="w-4 h-4 text-text-secondary" />
           </button>

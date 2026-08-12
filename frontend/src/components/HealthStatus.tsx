@@ -6,7 +6,7 @@ export default function HealthStatus({status}: HealthStatusProps) {
   const config = {
     ok: {dot: "bg-emerald-400", text: "text-emerald-500", label: "Connected"},
     degraded: {dot: "bg-amber-400", text: "text-amber-500", label: "Degraded"},
-    unknown: {dot: "bg-slate-400 animate-pulse", text: "text-slate-400", label: "Checking..."},
+    unknown: {dot: "bg-slate-400 animate-pulse", text: "text-text-tertiary", label: "Checking..."},
   };
 
   const c = config[status];

@@ -10,7 +10,7 @@ export default function ProcessingIndicator({stages, currentStage}: ProcessingIn
 
   return (
     <div className="flex gap-3">
-      <div className="w-8 h-8 rounded-full bg-slate-100 flex-shrink-0 flex items-center justify-center">
+      <div className="w-8 h-8 rounded-full bg-bg border border-border flex-shrink-0 flex items-center justify-center">
         <span className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
       </div>
       <div className="flex-1">
@@ -27,7 +27,7 @@ export default function ProcessingIndicator({stages, currentStage}: ProcessingIn
                       w-1.5 h-1.5 rounded-full transition-all
                       ${isActive ? "bg-accent w-2 h-2" : ""}
                       ${isComplete ? "bg-emerald-400" : ""}
-                      ${!isActive && !isComplete ? "bg-slate-300" : ""}
+                      ${!isActive && !isComplete ? "bg-border" : ""}
                     `}
                   />
                   <span

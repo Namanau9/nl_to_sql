@@ -16,7 +16,7 @@ export default function MessageList({messages}: MessageListProps) {
               w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-medium
               ${msg.role === "user"
                 ? "bg-accent text-white"
-                : "bg-slate-100 text-slate-600"}
+                : "bg-bg border border-border text-text-tertiary"}
             `}
           >
             {msg.role === "user" ? "U" : "AI"}
@@ -36,8 +36,8 @@ export default function MessageList({messages}: MessageListProps) {
             </div>
 
             {msg.error && (
-              <div className="mt-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2">
-                <p className="text-xs text-red-600">{msg.error}</p>
+              <div className="mt-2 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-3 py-2">
+                <p className="text-xs text-red-600 dark:text-red-400">{msg.error}</p>
               </div>
             )}
 

@@ -1,13 +1,15 @@
 import {useState, useRef, useEffect} from "react";
 import "./App.css";
 import {ChatMessage, ChatSession, QueryResponse, ProcessingStage, Settings} from "./types";
+import {useTheme} from "./hooks/useTheme";
 import QueryInput from "./components/QueryInput";
 import MessageList from "./components/MessageList";
 import ProcessingIndicator from "./components/ProcessingIndicator";
 import HealthStatus from "./components/HealthStatus";
 import Sidebar from "./components/Sidebar";
 import SettingsModal from "./components/SettingsModal";
-import {Menu, Settings as SettingsIcon, X} from "lucide-react";
+import ThemeToggle from "./components/ThemeToggle";
+import {Menu, Settings as SettingsIcon} from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL || window.location.origin;
 
@@ -26,6 +28,7 @@ const DEFAULT_SETTINGS: Settings = {
 };
 
 export default function App() {
+  const {theme, toggle} = useTheme();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -221,20 +224,21 @@ export default function App() {
       />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-14 border-b border-border bg-bg-alt px-4 flex items-center justify-between">
+         <header className="h-14 border-b border-border bg-bg-alt px-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-1 hover:bg-slate-100 rounded-lg transition-colors"
+              className="lg:hidden p-1 hover:bg-bg rounded-lg transition-colors"
             >
               <Menu className="w-5 h-5 text-text-secondary" />
             </button>
             <h1 className="font-medium text-text-primary">NL to SQL Assistant</h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <ThemeToggle theme={theme} onToggle={toggle} />
             <button
               onClick={() => setShowSettings(true)}
-              className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors"
+              className="p-1.5 hover:bg-bg rounded-lg transition-colors"
             >
               <SettingsIcon className="w-4 h-4 text-text-secondary" />
             </button>

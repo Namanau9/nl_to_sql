@@ -59,7 +59,7 @@ export default function Sidebar({
                       w-full text-left px-4 py-2.5 group
                       ${activeSessionId === session.id
                         ? "bg-accent/5"
-                        : "hover:bg-slate-50"}
+                        : "hover:bg-bg"}
                     `}
                   >
                     <div className="flex items-center justify-between">
