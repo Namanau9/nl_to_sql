@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS customers (
     email        TEXT        NOT NULL UNIQUE,
     region       TEXT        NOT NULL,
     country      TEXT        NOT NULL,
-    created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+        created_at   TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS products (

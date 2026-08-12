@@ -1,0 +1,93 @@
+"""Database connection management.
+
+Two engines are created:
+* the discovery engine (owner/migration role) used to introspect schema;
+* the execution engine (dedicated READ-ONLY role) used to run validated
+  queries. The read-only engine sets default_transaction_read_only=on and a
+  statement_timeout, so the database itself enforces read-only as a second
+  line of defense should application validation fail.
+"""
+from __future__ import annotations
+
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import Engine
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.pool import QueuePool
+
+from app.core import get_logger
+
+log = get_logger(__name__)
+
+
+class Database:
+    def __init__(
+        self,
+        database_url: str,
+        readonly_database_url: str | None = None,
+        pool_size: int = 5,
+        max_overflow: int = 2,
+        statement_timeout_ms: int = 10000,
+    ):
+        if not database_url:
+            raise ValueError("database_url is required")
+        self._statement_timeout_ms = statement_timeout_ms
+        self.discovery_engine: Engine = create_engine(
+            database_url,
+            poolclass=QueuePool,
+            pool_size=pool_size,
+            max_overflow=max_overflow,
+            pool_pre_ping=True,
+            future=True,
+        )
+        self.readonly_engine: Engine | None = None
+        if readonly_database_url:
+            options = (
+                f"-c default_transaction_read_only=on "
+                f"-c statement_timeout={statement_timeout_ms}ms"
+            )
+            self.readonly_engine = create_engine(
+                readonly_database_url,
+                poolclass=QueuePool,
+                pool_size=pool_size,
+                max_overflow=max_overflow,
+                pool_pre_ping=True,
+                future=True,
+                connect_args={"options": options},
+            )
+
+    def close(self) -> None:
+        self.discovery_engine.dispose()
+        if self.readonly_engine is not None:
+            self.readonly_engine.dispose()
+
+    def execute_readonly(
+        self, sql: str, params: dict | None = None, row_limit: int = 1000
+    ) -> tuple[list[str], list[list]]:
+        """Execute a read-only query and return (columns, rows)."""
+        if self.readonly_engine is None:
+            raise RuntimeError("Read-only database URL is not configured")
+        with self.readonly_engine.connect() as conn:
+            try:
+                result = conn.execute(text(sql), params or {})
+            except SQLAlchemyError as exc:
+                log.error(
+                    "Query execution failed",
+                    extra={"extra_data": {"error": str(exc)}},
+                    exc_info=True,
+                )
+                raise
+            columns = list(result.keys())
+            rows: list[list] = []
+            for i, row in enumerate(result):
+                if i >= row_limit:
+                    break
+                rows.append(list(row))
+            return columns, rows
+
+    def health(self) -> bool:
+        try:
+            with self.discovery_engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            return True
+        except SQLAlchemyError:
+            return False
