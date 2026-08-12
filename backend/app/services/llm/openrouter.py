@@ -73,6 +73,11 @@ class OpenRouterProvider(BaseLLMProvider):
         except (KeyError, IndexError, TypeError) as exc:
             raise LLMError(detail="Malformed LLM response") from exc
 
+        if content is None:
+            raise LLMError(
+                message="LLM returned an empty or refused response."
+            )
+
         usage_data = data.get("usage", {})
         usage = LLMUsage(
             prompt_tokens=usage_data.get("prompt_tokens", 0),
