@@ -1,4 +1,4 @@
-﻿[project]
+[project]
 name = "nlsql-backend"
 version = "0.1.0"
 description = "Natural Language to SQL Analytics Assistant - backend"
