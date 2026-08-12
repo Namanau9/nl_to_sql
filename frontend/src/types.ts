@@ -42,3 +42,15 @@ export type ProcessingStage =
   | "executing"
   | "explaining"
   | "done";
+
+export interface ChatSession {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  created_at: Date;
+}
+
+export interface Settings {
+  provider: string;
+  model: string;
+}

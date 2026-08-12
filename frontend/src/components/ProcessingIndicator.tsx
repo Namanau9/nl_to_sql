@@ -1,36 +1,49 @@
-import { ProcessingStage } from "../types";
+import {ProcessingStage} from "../types";
 
 interface ProcessingIndicatorProps {
-  stages: { key: ProcessingStage; label: string }[];
+  stages: {key: ProcessingStage; label: string}[];
   currentStage: ProcessingStage;
 }
 
-export default function ProcessingIndicator({ stages, currentStage }: ProcessingIndicatorProps) {
+export default function ProcessingIndicator({stages, currentStage}: ProcessingIndicatorProps) {
   const currentIndex = stages.findIndex((s) => s.key === currentStage);
 
   return (
-    <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="glass border border-amber-400/30 rounded-xl px-8 py-6 max-w-md w-full mx-4">
-        <h3 className="text-amber-400 font-display text-lg mb-4">Processing your question</h3>
-        <div className="space-y-3">
-          {stages.map((stage, i) => {
-            const isActive = i === currentIndex;
-            const isComplete = i < currentIndex;
-            return (
-              <div key={stage.key} className="flex items-center gap-3">
-                <div
-                  className={`stage-dot ${isActive ? "active" : ""} ${isComplete ? "complete" : ""}`}
-                />
-                <span
-                  className={`text-sm transition-colors ${
-                    isActive ? "text-amber-400" : isComplete ? "text-emerald-400" : "text-slate-500"
-                  }`}
-                >
-                  {stage.label}
-                </span>
-              </div>
-            );
-          })}
+    <div className="flex gap-3">
+      <div className="w-8 h-8 rounded-full bg-slate-100 flex-shrink-0 flex items-center justify-center">
+        <span className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+      <div className="flex-1">
+        <div className="rounded-xl bg-bg-alt border border-border px-4 py-3 shadow-subtle">
+          <p className="text-sm text-text-secondary">Processing your question...</p>
+          <div className="mt-2 space-y-1.5">
+            {stages.map((stage, i) => {
+              const isActive = i === currentIndex;
+              const isComplete = i < currentIndex;
+              return (
+                <div key={stage.key} className="flex items-center gap-2">
+                  <div
+                    className={`
+                      w-1.5 h-1.5 rounded-full transition-all
+                      ${isActive ? "bg-accent w-2 h-2" : ""}
+                      ${isComplete ? "bg-emerald-400" : ""}
+                      ${!isActive && !isComplete ? "bg-slate-300" : ""}
+                    `}
+                  />
+                  <span
+                    className={`
+                      text-xs transition-colors
+                      ${isActive ? "text-accent" : ""}
+                      ${isComplete ? "text-emerald-500" : ""}
+                      ${!isActive && !isComplete ? "text-text-tertiary" : ""}
+                    `}
+                  >
+                    {stage.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

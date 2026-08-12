@@ -1,58 +1,68 @@
-import { ChatMessage } from "../types";
+import {ChatMessage} from "../types";
 import ResultsTable from "./ResultsTable";
+import SqlDisplay from "./SqlDisplay";
 
 interface MessageListProps {
   messages: ChatMessage[];
 }
 
-export default function MessageList({ messages }: MessageListProps) {
+export default function MessageList({messages}: MessageListProps) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {messages.map((msg) => (
-        <div
-          key={msg.id}
-          className={`rounded-xl p-4 ${
-            msg.role === "user"
-              ? "bg-amber-400/10 border border-amber-400/30 ml-12"
-              : "glass border border-slate-700"
-          }`}
-        >
-          <div className="flex items-start gap-3">
+        <div key={msg.id} className="flex gap-3">
+          <div
+            className={`
+              w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-medium
+              ${msg.role === "user"
+                ? "bg-accent text-white"
+                : "bg-slate-100 text-slate-600"}
+            `}
+          >
+            {msg.role === "user" ? "U" : "AI"}
+          </div>
+          <div className="flex-1 min-w-0">
             <div
-              className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${
-                msg.role === "user"
-                  ? "bg-amber-400 text-slate-900"
-                  : "bg-slate-700 text-amber-400"
-              }`}
+              className={`
+                rounded-xl px-4 py-3
+                ${msg.role === "user"
+                  ? "bg-accent/5 border border-accent/10"
+                  : "bg-bg-alt border border-border shadow-subtle"}
+              `}
             >
-              {msg.role === "user" ? "U" : "AI"}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-slate-300 leading-relaxed break-words">
-                {msg.content}
+              <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">
+                {msg.content || (msg.error ? "I encountered an error processing your question." : "Thinking...")}
               </p>
-              {msg.error && (
-                <p className="mt-2 text-sm text-red-400">{msg.error}</p>
-              )}
-              {msg.sql && (
-                <pre className="mt-3 text-xs text-slate-400 bg-slate-800/50 rounded-lg p-3 overflow-x-auto border border-slate-700">
-                  <code>{msg.sql}</code>
-                </pre>
-              )}
-              {msg.results && (
-                <div className="mt-3">
-                  <ResultsTable columns={msg.results.columns} rows={msg.results.rows} />
-                  <p className="text-xs text-slate-500 mt-2">
-                    {msg.results.row_count} rows returned in {msg.results.execution_ms}ms
-                  </p>
-                </div>
-              )}
-              {msg.explanation && (!msg.results || msg.role === "assistant") && (
-                <p className="mt-2 text-sm text-slate-300 italic leading-relaxed">
-                  {msg.explanation}
-                </p>
-              )}
             </div>
+
+            {msg.error && (
+              <div className="mt-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2">
+                <p className="text-xs text-red-600">{msg.error}</p>
+              </div>
+            )}
+
+            {msg.sql && (
+              <div className="mt-2">
+                <SqlDisplay sql={msg.sql} />
+              </div>
+            )}
+
+            {msg.results && (
+              <div className="mt-2">
+                <ResultsTable columns={msg.results.columns} rows={msg.results.rows} />
+                {msg.results.row_count > 0 && (
+                  <p className="text-xs text-text-tertiary mt-2">
+                    {msg.results.row_count} row{msg.results.row_count !== 1 ? "s" : ""} in {msg.results.execution_ms}ms
+                  </p>
+                )}
+              </div>
+            )}
+
+            {msg.explanation && msg.role === "assistant" && !msg.content && (
+              <p className="text-sm text-text-secondary mt-1 italic">
+                {msg.explanation}
+              </p>
+            )}
           </div>
         </div>
       ))}
