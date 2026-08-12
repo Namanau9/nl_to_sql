@@ -21,7 +21,7 @@ Natural Language Explanation
       ↓
 Response to User
 ```
-
+![alt text](FLOW.png)
 > Security is designed with **defense in depth**: prompt rules + AST-based SQL validation + allowed-schema boundary + a dedicated read-only database role + query limits. The LLM is never treated as a security boundary.
 
 ---
@@ -37,7 +37,7 @@ Result: $8,400,050.00
 AI:   Your total revenue is $8,400,050.00.
 ```
 
-<img width="600" alt="Chat interface preview" src="https://placehold.co/600x400/ffffff/cccccc?text=NL+to+SQL+Assistant+Interface" style="border: 1px solid #e5e7eb; border-radius: 8px;">
+![alt text](image-1.png)
 
 ---
 
