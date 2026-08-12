@@ -1,4 +1,4 @@
-﻿# Skills
+# Skills
 
 This document lists reusable skills / runbooks used by the development agent for this project.
 

@@ -1,4 +1,4 @@
-﻿# Natural Language → SQL Analytics Assistant
+# Natural Language → SQL Analytics Assistant
 
 An AI-powered analytics assistant that converts natural-language business questions into **safe, validated SQL**, executes them against a **read-only** relational database, and returns structured results with natural-language explanations.
 
