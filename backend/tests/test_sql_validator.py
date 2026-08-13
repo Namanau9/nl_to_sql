@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.core.errors import SQLValidationError
+from app.core.errors import ReadonlyRestrictionError, SQLValidationError
 from app.services.sql import SQLValidator, validate_sql
 
 ALLOWED = {"customers", "orders", "order_items", "products"}
@@ -38,10 +38,92 @@ def test_subquery_passes():
     assert result.is_valid is True
 
 
+# --- Destructive operations -> ReadonlyRestrictionError (user-friendly) ---
+
+@pytest.mark.parametrize("sql", [
+    "DELETE FROM customers",
+    "DELETE FROM customers WHERE region = 'North'",
+])
+def test_delete_rejected(sql):
+    with pytest.raises(ReadonlyRestrictionError, match="read-only"):
+        validate_sql(sql, allowed_tables=ALLOWED)
+
+
+@pytest.mark.parametrize("sql", [
+    "INSERT INTO customers (first_name) VALUES ('Test')",
+    "INSERT INTO customers VALUES (99, 'evil', 'x@x.com')",
+])
+def test_insert_rejected(sql):
+    with pytest.raises(ReadonlyRestrictionError, match="read-only"):
+        validate_sql(sql, allowed_tables=ALLOWED)
+
+
+@pytest.mark.parametrize("sql", [
+    "UPDATE customers SET region = 'North'",
+    "UPDATE customers SET email = 'hacked@evil.com' WHERE customer_id = 1",
+])
+def test_update_rejected(sql):
+    with pytest.raises(ReadonlyRestrictionError, match="read-only"):
+        validate_sql(sql, allowed_tables=ALLOWED)
+
+
+@pytest.mark.parametrize("sql", [
+    "DROP TABLE customers",
+    "DROP TABLE orders CASCADE",
+    "DROP TABLE products",
+])
+def test_drop_rejected(sql):
+    with pytest.raises(ReadonlyRestrictionError, match="read-only"):
+        validate_sql(sql, allowed_tables=ALLOWED)
+
+
+@pytest.mark.parametrize("sql", [
+    "ALTER TABLE customers ADD COLUMN foo TEXT",
+    "ALTER TABLE customers RENAME TO users",
+])
+def test_alter_rejected(sql):
+    with pytest.raises(ReadonlyRestrictionError, match="read-only"):
+        validate_sql(sql, allowed_tables=ALLOWED)
+
+
+@pytest.mark.parametrize("sql", [
+    "TRUNCATE customers",
+    "TRUNCATE orders, products",
+])
+def test_truncate_rejected(sql):
+    with pytest.raises(ReadonlyRestrictionError, match="read-only"):
+        validate_sql(sql, allowed_tables=ALLOWED)
+
+
+@pytest.mark.parametrize("sql", [
+    "CREATE TABLE foo (id INT)",
+    "CREATE TABLE secret_data AS SELECT * FROM customers",
+    "CREATE INDEX idx_secret ON customers(customer_id)",
+])
+def test_create_rejected(sql):
+    with pytest.raises(ReadonlyRestrictionError, match="read-only"):
+        validate_sql(sql, allowed_tables=ALLOWED)
+
+
+def test_grant_rejected():
+    with pytest.raises(ReadonlyRestrictionError, match="read-only"):
+        validate_sql("GRANT ALL ON customers TO public", allowed_tables=ALLOWED)
+
+
+def test_revoke_rejected():
+    with pytest.raises(ReadonlyRestrictionError, match="read-only"):
+        validate_sql("REVOKE SELECT ON customers FROM nlsql_readonly", allowed_tables=ALLOWED)
+
+
+# --- Non-destructive validation errors -> SQLValidationError ---
+
 def test_empty_sql_rejected():
-    with pytest.raises(SQLValidationError, match="Empty SQL query"):
+    with pytest.raises(SQLValidationError, match="Empty SQL"):
         validate_sql("", allowed_tables=ALLOWED)
-    with pytest.raises(SQLValidationError, match="Empty SQL query"):
+
+
+def test_whitespace_only_sql_rejected():
+    with pytest.raises(SQLValidationError, match="Empty SQL"):
         validate_sql("   \n  ", allowed_tables=ALLOWED)
 
 
@@ -51,54 +133,8 @@ def test_parse_error_rejected():
 
 
 def test_multiple_statements_rejected():
-    sql = "SELECT 1; DROP TABLE customers"
     with pytest.raises(SQLValidationError, match="Multiple SQL statements"):
-        validate_sql(sql, allowed_tables=ALLOWED)
-
-
-def test_delete_rejected():
-    with pytest.raises(SQLValidationError, match="not permitted"):
-        validate_sql("DELETE FROM customers", allowed_tables=ALLOWED)
-
-
-def test_insert_rejected():
-    with pytest.raises(SQLValidationError, match="not permitted"):
-        validate_sql("INSERT INTO customers (first_name) VALUES ('Test')", allowed_tables=ALLOWED)
-
-
-def test_update_rejected():
-    with pytest.raises(SQLValidationError, match="not permitted"):
-        validate_sql("UPDATE customers SET region = 'North'", allowed_tables=ALLOWED)
-
-
-def test_drop_rejected():
-    with pytest.raises(SQLValidationError, match="not permitted"):
-        validate_sql("DROP TABLE customers", allowed_tables=ALLOWED)
-
-
-def test_alter_rejected():
-    with pytest.raises(SQLValidationError, match="not permitted"):
-        validate_sql("ALTER TABLE customers ADD COLUMN foo TEXT", allowed_tables=ALLOWED)
-
-
-def test_truncate_rejected():
-    with pytest.raises(SQLValidationError, match="not permitted"):
-        validate_sql("TRUNCATE customers", allowed_tables=ALLOWED)
-
-
-def test_create_rejected():
-    with pytest.raises(SQLValidationError, match="not permitted"):
-        validate_sql("CREATE TABLE foo (id INT)", allowed_tables=ALLOWED)
-
-
-def test_grant_rejected():
-    with pytest.raises(SQLValidationError, match="not permitted"):
-        validate_sql("GRANT ALL ON customers TO public", allowed_tables=ALLOWED)
-
-
-def test_revoke_rejected():
-    with pytest.raises(SQLValidationError, match="not permitted"):
-        validate_sql("REVOKE SELECT ON customers FROM nlsql_readonly", allowed_tables=ALLOWED)
+        validate_sql("SELECT 1; DROP TABLE customers", allowed_tables=ALLOWED)
 
 
 def test_unauthorized_table_rejected():
@@ -106,16 +142,17 @@ def test_unauthorized_table_rejected():
         validate_sql("SELECT * FROM pg_shadow", allowed_tables=ALLOWED)
 
 
-def test_unauthorized_table_in_select_rejected():
+def test_unauthorized_table_with_select_rejected():
     with pytest.raises(SQLValidationError, match="unauthorized table"):
-        validate_sql("SELECT * FROM pg_shadow", allowed_tables=ALLOWED)
+        validate_sql("SELECT * FROM customers, pg_shadow", allowed_tables=ALLOWED)
 
 
-def test_allowed_tables_enforced():
-    sql = "SELECT * FROM customers"
-    with pytest.raises(SQLValidationError, match="unauthorized table"):
-        validate_sql(sql, allowed_tables=set())
+def test_select_into_rejected():
+    with pytest.raises(SQLValidationError, match="INTO"):
+        validate_sql("SELECT * INTO customers_backup FROM customers", allowed_tables=ALLOWED)
 
+
+# --- Positive cases ---
 
 def test_cte_not_flagged_as_table():
     """CTE aliases should not trip the unauthorized-table check."""
@@ -148,6 +185,16 @@ def test_subquery_table_not_flagged_as_cte():
     assert set(result.referenced_tables) == {"customers", "orders"}
 
 
-def test_select_into_rejected():
-    with pytest.raises(SQLValidationError, match="INTO"):
-        validate_sql("SELECT * INTO customers_backup FROM customers", allowed_tables=ALLOWED)
+# --- Error message safety ---
+
+def test_destructive_error_messages_never_contain_sql():
+    """Security: destructive error messages must not echo the raw SQL back."""
+    sql = "DELETE FROM customers WHERE email LIKE '%evil%'"
+    try:
+        validate_sql(sql, allowed_tables=ALLOWED)
+        assert False, "Should have raised"
+    except ReadonlyRestrictionError as exc:
+        msg = str(exc)
+        assert "DELETE" not in msg
+        assert "email" not in msg
+        assert "evil" not in msg

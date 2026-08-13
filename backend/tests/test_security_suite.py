@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.core.errors import SQLValidationError
+from app.core.errors import ReadonlyRestrictionError, SQLValidationError
 from app.services.sql import SQLValidator
 
 ALLOWED = {"customers", "orders", "order_items", "products"}
@@ -17,7 +17,7 @@ def _validator() -> SQLValidator:
     return SQLValidator(allowed_tables=ALLOWED)
 
 
-# --- Destructive operations (F-018) ---
+# --- Destructive operations (F-018) — now raise ReadonlyRestrictionError ---
 
 @pytest.mark.parametrize("sql", [
     "DELETE FROM customers",
@@ -25,7 +25,7 @@ def _validator() -> SQLValidator:
     "DELETE FROM orders WHERE order_date < '2025-01-01'",
 ])
 def test_delete_rejected(sql):
-    with pytest.raises(SQLValidationError, match="not permitted"):
+    with pytest.raises(ReadonlyRestrictionError, match="read-only"):
         _validator().validate(sql)
 
 
@@ -34,7 +34,7 @@ def test_delete_rejected(sql):
     "INSERT INTO customers VALUES (99, 'evil', 'evil', 'x@x.com', 'X', 'X', now())",
 ])
 def test_insert_rejected(sql):
-    with pytest.raises(SQLValidationError, match="not permitted"):
+    with pytest.raises(ReadonlyRestrictionError, match="read-only"):
         _validator().validate(sql)
 
 
@@ -43,7 +43,7 @@ def test_insert_rejected(sql):
     "UPDATE customers SET email = 'hacked@evil.com' WHERE customer_id = 1",
 ])
 def test_update_rejected(sql):
-    with pytest.raises(SQLValidationError, match="not permitted"):
+    with pytest.raises(ReadonlyRestrictionError, match="read-only"):
         _validator().validate(sql)
 
 
@@ -53,7 +53,7 @@ def test_update_rejected(sql):
     "DROP TABLE products",
 ])
 def test_drop_rejected(sql):
-    with pytest.raises(SQLValidationError, match="not permitted"):
+    with pytest.raises(ReadonlyRestrictionError, match="read-only"):
         _validator().validate(sql)
 
 
@@ -63,7 +63,7 @@ def test_drop_rejected(sql):
     "ALTER TABLE orders ADD CONSTRAINT fk FOREIGN KEY (customer_id) REFERENCES customers",
 ])
 def test_alter_rejected(sql):
-    with pytest.raises(SQLValidationError, match="not permitted"):
+    with pytest.raises(ReadonlyRestrictionError, match="read-only"):
         _validator().validate(sql)
 
 
@@ -73,7 +73,7 @@ def test_alter_rejected(sql):
     "TRUNCATE customers RESTART IDENTITY CASCADE",
 ])
 def test_truncate_rejected(sql):
-    with pytest.raises(SQLValidationError, match="not permitted"):
+    with pytest.raises(ReadonlyRestrictionError, match="read-only"):
         _validator().validate(sql)
 
 
@@ -83,17 +83,17 @@ def test_truncate_rejected(sql):
     "CREATE INDEX idx_secret ON customers(customer_id)",
 ])
 def test_create_rejected(sql):
-    with pytest.raises(SQLValidationError, match="not permitted"):
+    with pytest.raises(ReadonlyRestrictionError, match="read-only"):
         _validator().validate(sql)
 
 
 def test_grant_rejected():
-    with pytest.raises(SQLValidationError):
+    with pytest.raises(ReadonlyRestrictionError, match="read-only"):
         _validator().validate("GRANT ALL ON customers TO PUBLIC")
 
 
 def test_revoke_rejected():
-    with pytest.raises(SQLValidationError):
+    with pytest.raises(ReadonlyRestrictionError, match="read-only"):
         _validator().validate("REVOKE ALL ON customers FROM nlsql_readonly")
 
 
@@ -169,7 +169,7 @@ def test_select_into_rejected():
 
 def test_command_fallback_rejected():
     """SQLglot falls back to Command type for unsupported statements."""
-    with pytest.raises(SQLValidationError):
+    with pytest.raises(ReadonlyRestrictionError, match="read-only"):
         _validator().validate("VACUUM customers")
 
 
@@ -179,7 +179,7 @@ def test_error_messages_never_contain_sql():
     try:
         _validator().validate(sql)
         assert False, "Should have raised"
-    except SQLValidationError as exc:
+    except (ReadonlyRestrictionError, SQLValidationError) as exc:
         msg = str(exc)
         assert "DELETE" not in msg
         assert "email" not in msg
@@ -204,7 +204,7 @@ def test_destructive_sql_reaches_validator():
     destructive = "DROP TABLE customers"
     extracted = _extract_sql(destructive)
     assert extracted == destructive
-    with pytest.raises(SQLValidationError, match="not permitted"):
+    with pytest.raises(ReadonlyRestrictionError, match="read-only"):
         _validator().validate(extracted)
 
 

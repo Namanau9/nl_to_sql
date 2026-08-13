@@ -10,9 +10,10 @@ from __future__ import annotations
 import re
 
 from app.core import get_logger
-from app.core.errors import LLMError
+from app.core.errors import LLMError, ReadonlyRestrictionError
 from app.services.llm.base import BaseLLMProvider
 from app.services.llm.models import LLMResponse
+from app.services.read_only.guard import check_question
 from app.services.schema.discovery import DatabaseSchema
 
 log = get_logger(__name__)
@@ -112,6 +113,8 @@ class LLMService:
                 timeout_seconds=timeout_seconds,
             )
         except LLMError:
+            if check_question(question).is_violation:
+                raise ReadonlyRestrictionError()
             raise
         except Exception as exc:
             raise LLMError(

@@ -1,6 +1,8 @@
 """Tests for the HTTP API (F-001, F-007, F-008)."""
 from __future__ import annotations
 
+import pytest
+
 
 def test_health_endpoint(api_client):
     resp = api_client.get("/api/health")
@@ -57,3 +59,21 @@ def test_query_endpoint_includes_sql_and_explanation(api_client):
     assert "sql" in data
     assert "explanation" in data
     assert "results" in data
+
+
+@pytest.mark.parametrize("question", [
+    "delete table customers",
+    "DROP TABLE customers",
+    "Add a new admin user",
+    "DELETE FROM customers",
+    "INSERT a new product",
+    "UPDATE the customer record",
+    "truncate the orders table",
+])
+def test_readonly_restriction_via_api(api_client, question):
+    """Destructive questions should be rejected with 422 and a user-friendly message."""
+    resp = api_client.post("/api/query", json={"question": question})
+    assert resp.status_code == 422
+    data = resp.json()
+    assert "read-only" in data["detail"].lower()
+    assert "SELECT" in data["detail"]
