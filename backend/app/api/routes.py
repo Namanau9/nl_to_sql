@@ -19,6 +19,7 @@ from app.schemas import HealthResponse, QueryRequest, QueryResponseSchema
 from app.services.execution import ExecutionService
 from app.services.llm import LLMService
 from app.services.logging import QueryLogger
+from app.services.read_only.guard import enforce_readonly
 from app.services.schema.discovery import SchemaDiscoveryService
 from app.services.schema.relevance import RelevanceSelector
 from app.services.sql.validator import SQLValidator
@@ -96,6 +97,9 @@ def query(
     start_ms = _now_ms()
 
     try:
+        # 0. Pre-flight: reject destructive / write intent immediately
+        enforce_readonly(request.question)
+
         # 1. Schema discovery
         schema = discovery.discover()
 

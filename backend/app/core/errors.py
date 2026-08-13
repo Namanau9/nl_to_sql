@@ -31,7 +31,10 @@ class SchemaSelectionError(AppError):
 
 
 class LLMError(AppError):
-    user_message = "The language model did not return a usable response."
+    user_message = (
+        "The language model did not return a usable response.\n"
+        "Please try rephrasing your question as a data inquiry."
+    )
     status_code = 502
 
     def __init__(self, message: str | None = None, status_code: int | None = None, detail: str | None = None):
@@ -67,6 +70,22 @@ class ResultProcessingError(AppError):
 class ExplanationError(AppError):
     user_message = "Could not generate an explanation of the results."
     status_code = 502
+
+
+class ReadonlyRestrictionError(AppError):
+    """Raised when a question or query violates the read-only boundary."""
+
+    user_message = (
+        "This assistant is restricted to read-only queries (SELECT statements).\n"
+        "I can't delete, modify, or create data, but I can help you analyze "
+        "your existing data. Try asking: 'How many customers do we have?' "
+        "or 'What was our total revenue?'"
+    )
+    status_code = 422
+
+    def __init__(self, message: str | None = None, detail: str | None = None):
+        super().__init__(message)
+        self.detail = detail
 
 
 class UnauthorizedQuestionError(AppError):

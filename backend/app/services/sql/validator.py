@@ -21,7 +21,7 @@ import sqlglot
 import sqlglot.expressions as exp
 
 from app.core import get_logger
-from app.core.errors import SQLValidationError
+from app.core.errors import ReadonlyRestrictionError, SQLValidationError
 
 log = get_logger(__name__)
 
@@ -85,6 +85,11 @@ def _check_statement_type(stmt: exp.Expression) -> str | None:
     return None
 
 
+def _is_destructive(stmt: exp.Expression) -> bool:
+    """Return True if *stmt* is a destructive/write/DDL statement type."""
+    return isinstance(stmt, _BLOCKED_STMT_TYPES)
+
+
 def _check_no_dangerous_hints(stmt: exp.Expression) -> str | None:
     """Reject constructs that hint at data exfiltration (e.g. SELECT INTO)."""
     sql = stmt.sql(dialect="postgres").upper()
@@ -144,7 +149,18 @@ def validate_sql(
 
     type_error = _check_statement_type(stmt)
     if type_error:
-        log.warning("SQL validation failed: statement type", extra={"extra_data": {"error": type_error}})
+        if _is_destructive(stmt):
+            log.warning(
+                "SQL validation failed: destructive statement",
+                extra={"extra_data": {"stmt_type": type(stmt).__name__}},
+            )
+            raise ReadonlyRestrictionError(
+                detail=f"Detected destructive statement type: {type(stmt).__name__}"
+            )
+        log.warning(
+            "SQL validation failed: statement type",
+            extra={"extra_data": {"error": type_error}},
+        )
         raise SQLValidationError(type_error)
 
     hint_error = _check_no_dangerous_hints(stmt)
